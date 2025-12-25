@@ -14,19 +14,26 @@ import {
 } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
+// [중요] 에디터 미리보기 환경에서는 아래 코드가 자동으로 설정을 불러옵니다.
+// Vercel 등 외부에 배포할 때는 아래 `__firebase_config` 부분을 지우고, 
+// 본인의 실제 Firebase 프로젝트 설정 객체로 대체해야 합니다.
+/* // [배포용 설정 예시]
 const firebaseConfig = {
-  apiKey: "AIzaSyA1UOI2Q5pCKJr2Zc76JJ0arnCPn9OlybI",
-  authDomain: "moneyapp-73ea4.firebaseapp.com",
-  projectId: "moneyapp-73ea4",
-  storageBucket: "moneyapp-73ea4.firebasestorage.app",
-  messagingSenderId: "1025222473222",
-  appId: "1:1025222473222:web:ea81f71288e56ab15cb587",
-  measurementId: "G-HQ1XZH02Z4"
+  apiKey: "본인의_API_KEY",
+  authDomain: "본인의_PROJECT_ID.firebaseapp.com",
+  projectId: "본인의_PROJECT_ID",
+  storageBucket: "본인의_PROJECT_ID.appspot.com",
+  messagingSenderId: "본인의_SENDER_ID",
+  appId: "본인의_APP_ID"
 };
+*/
 
+// 현재 에디터 환경용 설정 (수정하지 마세요)
+const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- Script Loader for XLSX ---
 const loadScript = (src) => {
@@ -72,6 +79,7 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // 에디터 환경의 특수 토큰 처리 (배포 시에는 signInAnonymously만 사용해도 무방)
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else {
@@ -101,7 +109,7 @@ export default function App() {
     if (!user) return;
 
     const q = query(
-      collection(db, 'users', user.uid, 'events'),
+      collection(db, 'artifacts', appId, 'users', user.uid, 'events'),
       orderBy('date', 'asc')
     );
 
@@ -149,7 +157,7 @@ export default function App() {
     if (!user || !newEvent.companyName || !newEvent.date) return;
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'events'), {
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'events'), {
         ...newEvent,
         createdAt: serverTimestamp(),
         isCompleted: false
@@ -174,7 +182,7 @@ export default function App() {
     const allChecked = Object.values(updatedChecklist).every(val => val === true);
 
     try {
-      const eventRef = doc(db, 'users', user.uid, 'events', eventId);
+      const eventRef = doc(db, 'artifacts', appId, 'users', user.uid, 'events', eventId);
       await updateDoc(eventRef, {
         [`checklist.${itemKey}`]: !currentVal,
         isCompleted: allChecked
@@ -192,7 +200,7 @@ export default function App() {
   const confirmDelete = async () => {
     if (!user || !deleteTargetId) return;
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'events', deleteTargetId));
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'events', deleteTargetId));
       setIsDeleteModalOpen(false);
       setDeleteTargetId(null);
     } catch (error) {
@@ -234,7 +242,7 @@ export default function App() {
       const data = window.XLSX.utils.sheet_to_json(ws);
 
       const batchPromises = data.map(row => {
-        return addDoc(collection(db, 'users', user.uid, 'events'), {
+        return addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'events'), {
           companyName: row['회사명'] || 'Unknown',
           date: row['날짜'] || formatDate(new Date()),
           eventType: row['구분'] || '기타',
