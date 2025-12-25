@@ -14,11 +14,19 @@ import {
 } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(__firebase_config);
+const firebaseConfig = {
+  apiKey: "AIzaSyA1UOI2Q5pCKJr2Zc76JJ0arnCPn9OlybI",
+  authDomain: "moneyapp-73ea4.firebaseapp.com",
+  projectId: "moneyapp-73ea4",
+  storageBucket: "moneyapp-73ea4.firebasestorage.app",
+  messagingSenderId: "1025222473222",
+  appId: "1:1025222473222:web:ea81f71288e56ab15cb587",
+  measurementId: "G-HQ1XZH02Z4"
+};
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- Script Loader for XLSX ---
 const loadScript = (src) => {
@@ -93,7 +101,7 @@ export default function App() {
     if (!user) return;
 
     const q = query(
-      collection(db, 'artifacts', appId, 'users', user.uid, 'events'),
+      collection(db, 'users', user.uid, 'events'),
       orderBy('date', 'asc')
     );
 
@@ -141,7 +149,7 @@ export default function App() {
     if (!user || !newEvent.companyName || !newEvent.date) return;
 
     try {
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'events'), {
+      await addDoc(collection(db, 'users', user.uid, 'events'), {
         ...newEvent,
         createdAt: serverTimestamp(),
         isCompleted: false
@@ -166,7 +174,7 @@ export default function App() {
     const allChecked = Object.values(updatedChecklist).every(val => val === true);
 
     try {
-      const eventRef = doc(db, 'artifacts', appId, 'users', user.uid, 'events', eventId);
+      const eventRef = doc(db, 'users', user.uid, 'events', eventId);
       await updateDoc(eventRef, {
         [`checklist.${itemKey}`]: !currentVal,
         isCompleted: allChecked
@@ -184,7 +192,7 @@ export default function App() {
   const confirmDelete = async () => {
     if (!user || !deleteTargetId) return;
     try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'events', deleteTargetId));
+      await deleteDoc(doc(db, 'users', user.uid, 'events', deleteTargetId));
       setIsDeleteModalOpen(false);
       setDeleteTargetId(null);
     } catch (error) {
@@ -226,7 +234,7 @@ export default function App() {
       const data = window.XLSX.utils.sheet_to_json(ws);
 
       const batchPromises = data.map(row => {
-        return addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'events'), {
+        return addDoc(collection(db, 'users', user.uid, 'events'), {
           companyName: row['회사명'] || 'Unknown',
           date: row['날짜'] || formatDate(new Date()),
           eventType: row['구분'] || '기타',
